@@ -14,11 +14,12 @@ import { uid } from '../utils/id'
  * Všetky dáta žijú pod jedným verzovaným kľúčom – jediné miesto,
  * ktoré číta a zapisuje localStorage.
  *
- * Migrácia v1 → v2: sanitizeData nižšie nikdy nečíta pole `version` zo
- * vstupu (vždy prepočíta a zapíše DATA_VERSION) a každé pole odvodzuje
- * defenzívne s fallbackom. Staré v1 záznamy tak automaticky dostanú
+ * Migrácia v1 → v2: sanitizeData nižšie vždy prepočíta a zapíše aktuálny
+ * DATA_VERSION a každé pole odvodzuje defenzívne s fallbackom – pole
+ * `version` zo vstupu sa číta iba na rozpoznanie, či ide o migráciu (pozri
+ * cleanupLegacyKeys nižšie). Staré v1 záznamy tak automaticky dostanú
  * `prefs.weeklyGoal = 3` a cviky bez `muscleGroup` zostanú „nezaradené"
- * (undefined) – žiadna strata dát, žiadny explicitný migračný krok.
+ * (undefined) – žiadna strata dát, žiadny explicitný migračný krok polí.
  */
 const STORAGE_KEY = 'maxperform:data'
 export const DATA_VERSION = 2 as const
@@ -31,6 +32,23 @@ function muscleGroup(v: unknown): MuscleGroup | undefined {
   return typeof v === 'string' && (MUSCLE_GROUPS as readonly string[]).includes(v)
     ? (v as MuscleGroup)
     : undefined
+}
+
+/**
+ * Appka predtým bežala pod kľúčmi "fittrack:exercises" a "fittrack:logs",
+ * kým sa premenovala na prefix "maxperform:". Tieto kľúče sa už nikde
+ * nečítajú, takže po migrácii na nový dátový formát ich raz odstránime,
+ * aby v localStorage nezostali osirené. Zámerne sa NEDOTÝKA kľúča
+ * "mpm-lang" (patrí inému projektu na tom istom dev porte) ani ničoho
+ * s prefixom "maxperform:".
+ */
+function cleanupLegacyKeys(): void {
+  try {
+    localStorage.removeItem('fittrack:exercises')
+    localStorage.removeItem('fittrack:logs')
+  } catch {
+    // localStorage nedostupné – appka beží ďalej bez vyčistenia.
+  }
 }
 
 export function defaultData(): AppData {
@@ -210,6 +228,12 @@ function sanitizePrefs(raw: unknown): Preferences {
 export function sanitizeData(raw: unknown): AppData {
   if (typeof raw !== 'object' || raw === null) return defaultData()
   const d = raw as Record<string, unknown>
+  // Uložené dáta ešte nemajú aktuálnu verziu → práve prebieha migrácia
+  // (napr. v1 → v2). Osirené kľúče po staršej appke vyčistíme len v tomto
+  // kroku, nie pri každom bežnom štarte.
+  if (d.version !== DATA_VERSION) {
+    cleanupLegacyKeys()
+  }
   // Miesto pre budúce migrácie: if (d.version === 0) { ... }
   return {
     version: DATA_VERSION,
