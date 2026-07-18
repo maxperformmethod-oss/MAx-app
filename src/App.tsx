@@ -12,6 +12,7 @@ import TrainingEditor from './pages/TrainingEditor'
 import WorkoutActive from './pages/WorkoutActive'
 import History from './pages/History'
 import HistoryDetail from './pages/HistoryDetail'
+import ImportPlan from './pages/ImportPlan'
 import Records from './pages/Records'
 import TimerPage from './pages/TimerPage'
 import Settings from './pages/Settings'
@@ -69,6 +70,7 @@ export default function App() {
                     <Route path="/history" element={<History />} />
                     <Route path="/history/:id" element={<HistoryDetail />} />
                     <Route path="/records" element={<Records />} />
+                    <Route path="/import" element={<ImportPlan />} />
                     <Route
                       path="/progress"
                       element={

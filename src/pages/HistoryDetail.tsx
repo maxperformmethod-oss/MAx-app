@@ -9,6 +9,7 @@ import {
   Dumbbell,
   Flag,
   ListChecks,
+  Share2,
   Trash2,
   Trophy,
   Weight,
@@ -18,7 +19,9 @@ import { useToast } from '../state/ToastContext'
 import { Button } from '../components/ui/Button'
 import { Card } from '../components/ui/Card'
 import { ConfirmDialog } from '../components/ui/ConfirmDialog'
-import { newRecordsInSession } from '../utils/calc'
+import { ShareResultModal } from '../components/share/ShareResultModal'
+import { currentStreak, newRecordsInSession } from '../utils/calc'
+import type { ShareCardData } from '../utils/shareCard'
 import {
   formatDurationWords,
   formatKg,
@@ -36,6 +39,7 @@ export default function HistoryDetail() {
   const { toast } = useToast()
   const navigate = useNavigate()
   const [confirmDelete, setConfirmDelete] = useState(false)
+  const [shareOpen, setShareOpen] = useState(false)
 
   const session = data.sessions.find((s) => s.id === id) ?? null
 
@@ -43,6 +47,23 @@ export default function HistoryDetail() {
     () => (session ? newRecordsInSession(session, data.sessions) : []),
     [session, data.sessions],
   )
+
+  const shareCardData = useMemo<ShareCardData | null>(() => {
+    if (!session) return null
+    return {
+      title: session.name,
+      dateLabel: `${formatLongDate(session.finishedAt)} · ${formatTime(session.startedAt)}`,
+      durationLabel: formatDurationWords(session.durationSec),
+      exerciseCount: session.exercises.length,
+      setCount: session.exercises.reduce((n, e) => n + e.sets.length, 0),
+      volumeLabel: formatKg(session.volume),
+      records: records.map((r) => ({
+        name: r.exercise,
+        valueLabel: `${formatKg(r.weight)} × ${r.reps}`,
+      })),
+      streakDays: currentStreak(data.sessions),
+    }
+  }, [session, records, data.sessions])
 
   // Porovnanie s predchádzajúcim tréningom rovnakého plánu/názvu.
   const previous = useMemo(() => {
@@ -221,15 +242,28 @@ export default function HistoryDetail() {
       </div>
 
       {isSummary && (
-        <div className="mt-6 flex gap-3">
-          <Button variant="secondary" className="flex-1" onClick={() => navigate('/history')}>
-            História
+        <div className="mt-6 space-y-3">
+          <Button size="lg" className="w-full" onClick={() => setShareOpen(true)}>
+            <Share2 className="size-5" aria-hidden /> Zdieľať výsledok
           </Button>
-          <Link to="/" className="flex-1">
-            <Button className="w-full">Na prehľad</Button>
-          </Link>
+          <div className="flex gap-3">
+            <Button variant="secondary" className="flex-1" onClick={() => navigate('/history')}>
+              História
+            </Button>
+            <Link to="/" className="flex-1">
+              <Button variant="secondary" className="w-full">
+                Na prehľad
+              </Button>
+            </Link>
+          </div>
         </div>
       )}
+
+      <ShareResultModal
+        open={shareOpen}
+        onClose={() => setShareOpen(false)}
+        data={shareCardData}
+      />
 
       <ConfirmDialog
         open={confirmDelete}

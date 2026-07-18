@@ -10,15 +10,52 @@ interface ModalProps {
   children: ReactNode
 }
 
-/** Modal so spodným zarovnaním na mobile (bottom sheet) a centrovaním na desktope. */
+const FOCUSABLE =
+  'button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])'
+
+/**
+ * Modal so spodným zarovnaním na mobile (bottom sheet) a centrovaním na
+ * desktope. Fokus je uväznený vo vnútri (Tab/Shift+Tab cykluje), Esc zatvára
+ * a po zatvorení sa fokus vráti na pôvodný prvok.
+ */
 export function Modal({ open, onClose, title, children }: ModalProps) {
   const panelRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
     if (!open) return
+    const previouslyFocused =
+      document.activeElement instanceof HTMLElement ? document.activeElement : null
+
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') onClose()
+      if (e.key === 'Escape') {
+        onClose()
+        return
+      }
+      if (e.key !== 'Tab') return
+      const panel = panelRef.current
+      if (!panel) return
+      const focusables = Array.from(panel.querySelectorAll<HTMLElement>(FOCUSABLE)).filter(
+        (el) => el.offsetParent !== null,
+      )
+      if (focusables.length === 0) {
+        e.preventDefault()
+        panel.focus()
+        return
+      }
+      const first = focusables[0]
+      const last = focusables[focusables.length - 1]
+      const active = document.activeElement
+      if (e.shiftKey) {
+        if (active === first || active === panel || !panel.contains(active)) {
+          e.preventDefault()
+          last.focus()
+        }
+      } else if (active === last || !panel.contains(active)) {
+        e.preventDefault()
+        first.focus()
+      }
     }
+
     document.addEventListener('keydown', onKey)
     // Zamkni scroll pod modalom.
     const prev = document.body.style.overflow
@@ -27,6 +64,7 @@ export function Modal({ open, onClose, title, children }: ModalProps) {
     return () => {
       document.removeEventListener('keydown', onKey)
       document.body.style.overflow = prev
+      previouslyFocused?.focus()
     }
   }, [open, onClose])
 
@@ -37,6 +75,7 @@ export function Modal({ open, onClose, title, children }: ModalProps) {
           <motion.button
             type="button"
             aria-label="Zavrieť"
+            tabIndex={-1}
             className="absolute inset-0 bg-black/60"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}

@@ -26,6 +26,15 @@ primárne pre mobil (mobile-first, tmavý režim).
   cviky.
 - **Osobné rekordy** (`/records`) – pre každý cvik odhad 1RM, najťažšia séria
   a najväčší objem jednej série.
+- **Zdieľanie programu odkazom + QR** – pri každom pláne „Zdieľať program":
+  predpis plánu (bez histórie a nastavení) sa zabalí do URL fragmentu
+  (gzip + base64url, nič sa neposiela na server) a vygeneruje sa QR kód.
+  Príjemca na `/import` uvidí najprv náhľad a plán sa uloží až po potvrdení –
+  import nikdy neprepíše existujúce plány (pri zhode názvu pridá sufix).
+- **Zdieľateľná karta výsledku** – po dokončení tréningu „Zdieľať výsledok"
+  vykreslí brandovaný obrázok (Instagram feed 1080×1350 / stories 1080×1920)
+  natívnym canvasom; zdieľanie cez `navigator.share`, stiahnutie PNG alebo
+  kopírovanie do schránky.
 - **Nastavenia** – týždenný cieľ tréningov, predvolený odpočinok, zvuk,
   ukážkové dáta, export/import JSON, vymazanie všetkých dát.
 
@@ -42,8 +51,13 @@ primárne pre mobil (mobile-first, tmavý režim).
 - [Framer Motion](https://motion.dev/) (rešpektuje `prefers-reduced-motion`)
 - [Recharts](https://recharts.org/) – grafy (lenivo načítavané)
 - [lucide-react](https://lucide.dev/) – ikony
+- [qrcode](https://github.com/soldair/node-qrcode) – lokálne generovanie QR
+  kódu na zdieľanie programu (žiadna externá služba)
 - [vite-plugin-pwa](https://vite-pwa-org.netlify.app/) – manifest + service
   worker (offline app shell, inštalácia na plochu)
+
+Zdieľateľná karta výsledku sa kreslí priamo v prehliadači cez `<canvas>` –
+bez ďalšej knižnice a bez screenshotu DOM.
 
 ## PWA / offline
 

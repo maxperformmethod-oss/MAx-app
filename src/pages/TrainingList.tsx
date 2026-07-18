@@ -1,20 +1,23 @@
 import { useMemo, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { motion } from 'framer-motion'
-import { Dumbbell, Pencil, Play, Plus, Trash2 } from 'lucide-react'
+import { Dumbbell, Pencil, Play, Plus, Share2, Trash2 } from 'lucide-react'
 import { useApp } from '../state/AppContext'
 import { useToast } from '../state/ToastContext'
 import { Button } from '../components/ui/Button'
 import { Card } from '../components/ui/Card'
 import { EmptyState } from '../components/ui/EmptyState'
 import { ConfirmDialog } from '../components/ui/ConfirmDialog'
+import { SharePlanModal } from '../components/share/SharePlanModal'
 import { formatRelativeDay, plural } from '../utils/format'
+import type { WorkoutPlan } from '../types'
 
 export default function TrainingList() {
   const { data, deletePlan, startWorkout } = useApp()
   const { toast } = useToast()
   const navigate = useNavigate()
   const [toDelete, setToDelete] = useState<string | null>(null)
+  const [toShare, setToShare] = useState<WorkoutPlan | null>(null)
 
   const lastTrained = useMemo(() => {
     const map = new Map<string, string>()
@@ -88,6 +91,14 @@ export default function TrainingList() {
                   <div className="flex shrink-0 gap-1">
                     <button
                       type="button"
+                      aria-label={`Zdieľať program ${plan.name}`}
+                      onClick={() => setToShare(plan)}
+                      className="flex size-9 items-center justify-center rounded-lg text-ink-dim hover:bg-surface-3 hover:text-ink"
+                    >
+                      <Share2 className="size-4" aria-hidden />
+                    </button>
+                    <button
+                      type="button"
                       aria-label={`Upraviť ${plan.name}`}
                       onClick={() => navigate(`/training/${plan.id}`)}
                       className="flex size-9 items-center justify-center rounded-lg text-ink-dim hover:bg-surface-3 hover:text-ink"
@@ -137,6 +148,8 @@ export default function TrainingList() {
           })}
         </div>
       )}
+
+      <SharePlanModal plan={toShare} open={toShare !== null} onClose={() => setToShare(null)} />
 
       <ConfirmDialog
         open={toDelete !== null}
