@@ -1,56 +1,92 @@
-import { BrowserRouter, Routes, Route, Link } from 'react-router-dom'
-import { motion } from 'framer-motion'
+import { Suspense, lazy, useEffect } from 'react'
+import { BrowserRouter, Route, Routes, useLocation } from 'react-router-dom'
+import { MotionConfig } from 'framer-motion'
+import { AppProvider, useApp } from './state/AppContext'
+import { TimerProvider } from './state/TimerContext'
+import { ToastProvider } from './state/ToastContext'
+import { ErrorBoundary } from './components/ErrorBoundary'
+import { AppLayout } from './components/layout/AppLayout'
+import Dashboard from './pages/Dashboard'
+import TrainingList from './pages/TrainingList'
+import TrainingEditor from './pages/TrainingEditor'
+import WorkoutActive from './pages/WorkoutActive'
+import History from './pages/History'
+import HistoryDetail from './pages/HistoryDetail'
+import Records from './pages/Records'
+import TimerPage from './pages/TimerPage'
+import Settings from './pages/Settings'
 
-function Home() {
+// Grafy (recharts) sú najväčšia časť bundlu – načítavajú sa lenivo.
+const Progress = lazy(() => import('./pages/Progress'))
+
+/** Po zmene routy odskroluj hore. */
+function ScrollToTop() {
+  const { pathname } = useLocation()
+  useEffect(() => {
+    window.scrollTo({ top: 0 })
+  }, [pathname])
+  return null
+}
+
+function ChartsFallback() {
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 12 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.4 }}
-      className="text-center"
+    <div className="flex h-64 items-center justify-center text-sm text-ink-dim" role="status">
+      Načítavam grafy…
+    </div>
+  )
+}
+
+/** Most medzi AppContext (preferencie) a TimerProviderom. */
+function Providers({ children }: { children: React.ReactNode }) {
+  const { data, setPrefs } = useApp()
+  return (
+    <TimerProvider
+      soundOn={data.prefs.soundOn}
+      setSoundOn={(soundOn) => setPrefs({ soundOn })}
     >
-      <h1 className="text-4xl font-bold text-slate-800">Home</h1>
-      <p className="mt-2 text-slate-500">
-        React + Vite + TypeScript, styled with Tailwind and animated with Framer
-        Motion.
-      </p>
-    </motion.div>
+      {children}
+    </TimerProvider>
   )
 }
 
-function About() {
+export default function App() {
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 12 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.4 }}
-      className="text-center"
-    >
-      <h1 className="text-4xl font-bold text-slate-800">About</h1>
-      <p className="mt-2 text-slate-500">A second route via React Router.</p>
-    </motion.div>
+    <ErrorBoundary>
+      {/* reducedMotion="user" – rešpektuje prefers-reduced-motion. */}
+      <MotionConfig reducedMotion="user">
+        <ToastProvider>
+          <AppProvider>
+            <Providers>
+              <BrowserRouter>
+                <ScrollToTop />
+                <Routes>
+                  <Route element={<AppLayout />}>
+                    <Route path="/" element={<Dashboard />} />
+                    <Route path="/training" element={<TrainingList />} />
+                    <Route path="/training/new" element={<TrainingEditor />} />
+                    <Route path="/training/:id" element={<TrainingEditor />} />
+                    <Route path="/workout" element={<WorkoutActive />} />
+                    <Route path="/history" element={<History />} />
+                    <Route path="/history/:id" element={<HistoryDetail />} />
+                    <Route path="/records" element={<Records />} />
+                    <Route
+                      path="/progress"
+                      element={
+                        <Suspense fallback={<ChartsFallback />}>
+                          <Progress />
+                        </Suspense>
+                      }
+                    />
+                    <Route path="/timer" element={<TimerPage />} />
+                    <Route path="/settings" element={<Settings />} />
+                    <Route path="*" element={<Dashboard />} />
+                  </Route>
+                </Routes>
+              </BrowserRouter>
+            </Providers>
+          </AppProvider>
+        </ToastProvider>
+      </MotionConfig>
+    </ErrorBoundary>
   )
 }
-
-function App() {
-  return (
-    <BrowserRouter>
-      <div className="min-h-screen bg-slate-50 flex flex-col items-center gap-8 p-10">
-        <nav className="flex gap-6">
-          <Link className="text-indigo-600 hover:underline" to="/">
-            Home
-          </Link>
-          <Link className="text-indigo-600 hover:underline" to="/about">
-            About
-          </Link>
-        </nav>
-        <Routes>
-          <Route path="/" element={<Home />} />
-          <Route path="/about" element={<About />} />
-        </Routes>
-      </div>
-    </BrowserRouter>
-  )
-}
-
-export default App
